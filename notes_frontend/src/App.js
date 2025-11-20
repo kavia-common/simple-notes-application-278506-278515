@@ -1,47 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
+import './index.css';
+import Sidebar from './components/Sidebar';
+import Editor from './components/Editor';
+import EmptyState from './components/EmptyState';
+import { useNotes } from './hooks/useNotes';
 
+/**
+ * App - Root component rendering the notes layout with sidebar and editor.
+ * Manages state via useNotes hook and renders storage warnings and aria-live region.
+ */
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  const {
+    notes,
+    filteredNotes,
+    selectedNoteId,
+    selectNote,
+    createNote,
+    updateNote,
+    deleteNote,
+    searchQuery,
+    setSearchQuery,
+    lastSavedAt,
+    storageAvailable,
+    storageWarningDismissed,
+    dismissStorageWarning,
+  } = useNotes();
 
-  // Effect to apply theme to document element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  const selectedNote = notes.find((n) => n.id === selectedNoteId) || null;
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+    <div className="app-root">
+      <header className="app-header" role="banner" aria-label="Simple Notes">
+        <h1 className="app-title">Simple Notes</h1>
       </header>
+
+      {!storageAvailable && !storageWarningDismissed && (
+        <div className="storage-warning" role="alert">
+          <div>
+            Storage seems unavailable. Your notes may not persist across reloads.
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={dismissStorageWarning}
+            aria-label="Dismiss storage warning"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <div className="layout">
+        <nav className="sidebar" aria-label="Notes list">
+          <Sidebar
+            notes={filteredNotes}
+            selectedNoteId={selectedNoteId}
+            onSelect={selectNote}
+            onDelete={deleteNote}
+            onCreate={createNote}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        </nav>
+
+        <main className="editor-area" role="main" aria-label="Editor area">
+          {selectedNote ? (
+            <Editor
+              key={selectedNote.id}
+              note={selectedNote}
+              onChange={updateNote}
+              lastSavedAt={lastSavedAt}
+            />
+          ) : (
+            <EmptyState onCreate={createNote} />
+          )}
+        </main>
+      </div>
+
+      <div className="sr-only" aria-live="polite" aria-atomic="true" id="global-live-region" />
     </div>
   );
 }
